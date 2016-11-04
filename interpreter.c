@@ -153,30 +153,35 @@ void interpreter_eat(interpreter_t *interpreter, int token_type) {
     }
 }
 
-int interpreter_expr(interpreter_t *interpreter) {
-    interpreter->current_token = interpreter_next_token(interpreter);
-
-    token_t *left = interpreter->current_token;
+int interpreter_term(interpreter_t *interpreter) {
+    token_t *token = interpreter->current_token;
     interpreter_eat(interpreter, T_INTEGER);
     
-    token_t *op = interpreter->current_token;
-    if (op->type == T_PLUS) {
-        interpreter_eat(interpreter, T_PLUS);
-    } else {
-        interpreter_eat(interpreter, T_MINUS);
+    int value = token->value;
+    free(token);
+
+    return value;
+}
+
+int interpreter_expr(interpreter_t *interpreter) {
+    token_t *token;
+
+    interpreter->current_token = interpreter_next_token(interpreter);
+    int result = interpreter_term(interpreter);
+    while (interpreter->current_token->type == T_PLUS || interpreter->current_token->type == T_MINUS) {
+        token = interpreter->current_token;
+        if (token->type == T_PLUS) {
+            interpreter_eat(interpreter, T_PLUS);
+            result += interpreter_term(interpreter);
+        }
+        else if (token->type == T_MINUS) {
+            interpreter_eat(interpreter, T_MINUS);
+            result -= interpreter_term(interpreter);
+        }
+        free(token);
     }
 
-    token_t *right = interpreter->current_token;
-    interpreter_eat(interpreter, T_INTEGER);
-    
-    int result;
-    
-    if (op->type == T_PLUS)
-        result = left->value + right->value;
-    else
-        result = left->value - right->value;
-
-    free(left); free(op); free(right);
+    //free(left); free(op); free(right);
     return result;
 }
 
@@ -190,8 +195,27 @@ main(void) {
     printf("%d\n", result);
     interpreter_free(interpreter);
 */
+    printf("32 - 1 = ");
     interpreter_t *interpreter = interpreter_new("32 - 1", 6);
     int result = interpreter_expr(interpreter);
+    printf("%d\n", result);
+    interpreter_free(interpreter);
+
+    printf("32 + 1 = ");
+    interpreter = interpreter_new("32 + 1", 6);
+    result = interpreter_expr(interpreter);
+    printf("%d\n", result);
+    interpreter_free(interpreter);
+
+    printf("40 + 2 = ");
+    interpreter = interpreter_new("40 + 2", 6);
+    result = interpreter_expr(interpreter);
+    printf("%d\n", result);
+    interpreter_free(interpreter);
+
+    printf("1  +  2 + 3 = ");
+    interpreter = interpreter_new("1  +  2 + 3", 11);
+    result = interpreter_expr(interpreter);
     printf("%d\n", result);
     interpreter_free(interpreter);
 
