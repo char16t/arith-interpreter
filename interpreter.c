@@ -12,6 +12,8 @@
 #define T_MINUS   4
 #define T_DIV     5
 #define T_MUL     6
+#define T_LPAREN  7
+#define T_RPAREN  8
 
 typedef struct token_s token_t;
 struct token_s {
@@ -146,6 +148,16 @@ token_t *lexer_next_token(lexer_t *lexer) {
             return token_new(T_DIV, '/');
         }
 
+        if (lexer->current_char == '(') {
+            lexer_advance(lexer);
+            return token_new(T_LPAREN, '(');
+        }
+
+        if (lexer->current_char == ')') {
+            lexer_advance(lexer);
+            return token_new(T_RPAREN, ')');
+        }
+
         lexer_error(lexer);
     }
 
@@ -162,7 +174,7 @@ struct interpreter_s {
 interpreter_t *interpreter_new(lexer_t *lexer) {
     interpreter_t *interpreter = (interpreter_t *) calloc(1, sizeof(interpreter_t));
     interpreter->lexer = lexer;
-    interpreter->current_token = NULL;
+    interpreter->current_token = lexer_next_token(interpreter->lexer);
     return interpreter;
 }
 
@@ -176,20 +188,33 @@ void interpreter_error(interpreter_t *interpreter) {
     exit(1);
 }
 
-void interpreter_eat(interpreter_t *interpreter, int token_type) {
+token_t *interpreter_eat(interpreter_t *interpreter, int token_type) {
     if (interpreter->current_token->type == token_type) {
+        token_t *prev = interpreter->current_token;
         interpreter->current_token = lexer_next_token(interpreter->lexer);
+        return prev;
     } else {
         interpreter_error(interpreter);
     }
 }
 
+int interpreter_expr(interpreter_t *interpreter);
+
 int interpreter_factor(interpreter_t *interpreter) {
     token_t *token = interpreter->current_token;
-    interpreter_eat(interpreter, T_INTEGER);
+    int value;
 
-    int value = token->value;
-    free(token);
+    if (token->type == T_INTEGER) {
+        interpreter_eat(interpreter, T_INTEGER);
+        value = token->value;
+        free(token);
+    }
+    else if (token->type == T_LPAREN) {
+        token_t *lp = interpreter_eat(interpreter, T_LPAREN);
+        value = interpreter_expr(interpreter);
+        token_t *rp = interpreter_eat(interpreter, T_RPAREN);
+        free(lp); free(rp);
+    }
 
     return value;
 }
@@ -218,7 +243,6 @@ int interpreter_term(interpreter_t *interpreter) {
 int interpreter_expr(interpreter_t *interpreter) {
     token_t *token;
 
-    interpreter->current_token = lexer_next_token(interpreter->lexer);
     int result = interpreter_term(interpreter);
     while (interpreter->current_token->type == T_PLUS || interpreter->current_token->type == T_MINUS) {
         token = interpreter->current_token;
@@ -280,6 +304,14 @@ main(void) {
 
     printf("2+ 2 * 3 = ");
     lexer = lexer_new("2+2*3", 5);
+    interpreter = interpreter_new(lexer);
+    result = interpreter_expr(interpreter);
+    printf("%d\n", result);
+    lexer_free(lexer);
+    interpreter_free(interpreter);
+
+    printf("(2+ 2) * 3 = ");
+    lexer = lexer_new("(2+2)*3", 7);
     interpreter = interpreter_new(lexer);
     result = interpreter_expr(interpreter);
     printf("%d\n", result);
