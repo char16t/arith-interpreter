@@ -59,21 +59,109 @@ void token_print(token_t *token) {
     free(str);
 }
 
-typedef struct interpreter_s interpreter_t;
-struct interpreter_s {
+typedef struct lexer_s lexer_t;
+struct lexer_s {
     char *text;
     unsigned int text_length;
     unsigned int pos;
     char current_char;
+};
+
+lexer_t *lexer_new(char *text, unsigned int len) {
+    lexer_t *lexer = (lexer_t *) calloc(1, sizeof(lexer));
+    lexer->text = text;
+    lexer->text_length = len;
+    lexer->pos = 0;
+    lexer->current_char = lexer->text[lexer->pos];
+}
+
+void lexer_free(lexer_t *lexer) {
+    free(lexer);
+}
+
+void lexer_error(lexer_t *lexer) {
+    puts("Invalid character\n");
+    exit(1);
+}
+
+void lexer_advance(lexer_t *lexer) {
+    lexer->pos += 1;
+    if (lexer->pos > lexer->text_length - 1) {
+        lexer->current_char = NULL;
+    } else {
+        lexer->current_char = lexer->text[lexer->pos];
+    }
+}
+
+void lexer_skip_whitespaces(lexer_t *lexer) {
+    while (lexer->current_char && lexer->current_char == ' ') {
+        lexer_advance(lexer);
+    }
+}
+
+int lexer_integer(lexer_t *lexer) {
+    char result[10];
+    unsigned int i = 0;
+    while (lexer->current_char && isdigit(lexer->current_char)) {
+        result[i] = lexer->current_char;
+        lexer_advance(lexer);
+        i++;
+    }
+    return atoi(result);
+}
+
+token_t *lexer_next_token(lexer_t *lexer) {
+    token_t *token;
+
+    while (lexer->current_char) {
+        if (lexer->current_char == ' ') {
+            lexer_skip_whitespaces(lexer);
+            continue;
+        }
+
+        if (isdigit(lexer->current_char)) {
+            token = token_new(T_INTEGER, lexer_integer(lexer));
+            return token;
+        }
+
+        if (lexer->current_char == '+') {
+            lexer_advance(lexer);
+            token = token_new(T_PLUS, '+');
+            return token;
+        }
+
+        if (lexer->current_char == '-') {
+            lexer_advance(lexer);
+            token = token_new(T_MINUS, '-');
+            return token;
+        }
+
+        if (lexer->current_char == '*') {
+            lexer_advance(lexer);
+            return token_new(T_MUL, '*');
+        }
+
+        if (lexer->current_char == '/') {
+            lexer_advance(lexer);
+            return token_new(T_DIV, '/');
+        }
+
+        lexer_error(lexer);
+    }
+
+    token = token_new(T_EOF, (char)0);
+    return token;
+}
+
+typedef struct interpreter_s interpreter_t;
+struct interpreter_s {
+    lexer_t *lexer;
     token_t *current_token;
 };
 
-interpreter_t *interpreter_new(char *text, unsigned int len) {
+interpreter_t *interpreter_new(lexer_t *lexer) {
     interpreter_t *interpreter = (interpreter_t *) calloc(1, sizeof(interpreter_t));
-    interpreter->text = text;
-    interpreter->text_length = len;
-    interpreter->pos = 0;
-    interpreter->current_char = interpreter->text[interpreter->pos];
+    interpreter->lexer = lexer;
     interpreter->current_token = NULL;
     return interpreter;
 }
@@ -84,82 +172,13 @@ void interpreter_free(interpreter_t *interpreter) {
 }
 
 void interpreter_error(interpreter_t *interpreter) {
-    puts("Error parsing input\n");
+    puts("Invalid token\n");
     exit(1);
-}
-
-void interpreter_advance(interpreter_t *interpreter) {
-    interpreter->pos += 1;
-    if (interpreter->pos > interpreter->text_length - 1) {
-        interpreter->current_char = NULL;
-    } else {
-        interpreter->current_char = interpreter->text[interpreter->pos];
-    }
-}
-
-void interpreter_skip_whitespaces(interpreter_t *interpreter) {
-    while (interpreter->current_char && interpreter->current_char == ' ') {
-        interpreter_advance(interpreter);
-    }
-}
-
-int interpreter_integer(interpreter_t *interpreter) {
-    char result[10];
-    unsigned int i = 0;
-    while (interpreter->current_char && isdigit(interpreter->current_char)) {
-        result[i] = interpreter->current_char;
-        interpreter_advance(interpreter);
-        i++;
-    }
-    return atoi(result);
-}
-
-token_t *interpreter_next_token(interpreter_t *interpreter) {
-    token_t *token;
-
-    while (interpreter->current_char) {
-        if (interpreter->current_char == ' ') {
-            interpreter_skip_whitespaces(interpreter);
-            continue;
-        }
-
-        if (isdigit(interpreter->current_char)) {
-            token = token_new(T_INTEGER, interpreter_integer(interpreter));
-            return token;
-        }
-
-        if (interpreter->current_char == '+') {
-            interpreter_advance(interpreter);
-            token = token_new(T_PLUS, '+');
-            return token;
-        }
-
-        if (interpreter->current_char == '-') {
-            interpreter_advance(interpreter);
-            token = token_new(T_MINUS, '-');
-            return token;
-        }
-
-        if (interpreter->current_char == '*') {
-            interpreter_advance(interpreter);
-            return token_new(T_MUL, '*');
-        }
-
-        if (interpreter->current_char == '/') {
-            interpreter_advance(interpreter);
-            return token_new(T_DIV, '/');
-        }
-
-        interpreter_error(interpreter);
-    }
-
-    token = token_new(T_EOF, (char)0);
-    return token;
 }
 
 void interpreter_eat(interpreter_t *interpreter, int token_type) {
     if (interpreter->current_token->type == token_type) {
-        interpreter->current_token = interpreter_next_token(interpreter);
+        interpreter->current_token = lexer_next_token(interpreter->lexer);
     } else {
         interpreter_error(interpreter);
     }
@@ -180,15 +199,15 @@ int interpreter_term(interpreter_t *interpreter) {
 
     int result = interpreter_factor(interpreter);
 
-    while (interpreter->current_token->type == T_PLUS || interpreter->current_token->type == T_MINUS) {
+    while (interpreter->current_token->type == T_MUL || interpreter->current_token->type == T_DIV) {
         token = interpreter->current_token;
-        if (token->type == T_PLUS) {
-            interpreter_eat(interpreter, T_PLUS);
-            result += interpreter_term(interpreter);
+        if (token->type == T_MUL) {
+            interpreter_eat(interpreter, T_MUL);
+            result *= interpreter_term(interpreter);
         }
-        else if (token->type == T_MINUS) {
-            interpreter_eat(interpreter, T_MINUS);
-            result -= interpreter_term(interpreter);
+        else if (token->type == T_DIV) {
+            interpreter_eat(interpreter, T_DIV);
+            result /= interpreter_term(interpreter);
         }
         free(token);
     }
@@ -199,7 +218,7 @@ int interpreter_term(interpreter_t *interpreter) {
 int interpreter_expr(interpreter_t *interpreter) {
     token_t *token;
 
-    interpreter->current_token = interpreter_next_token(interpreter);
+    interpreter->current_token = lexer_next_token(interpreter->lexer);
     int result = interpreter_term(interpreter);
     while (interpreter->current_token->type == T_PLUS || interpreter->current_token->type == T_MINUS) {
         token = interpreter->current_token;
@@ -228,27 +247,43 @@ main(void) {
     interpreter_free(interpreter);
 */
     printf("32 - 1 = ");
-    interpreter_t *interpreter = interpreter_new("32 - 1", 6);
+    lexer_t *lexer = lexer_new("32 - 1", 6);
+    interpreter_t *interpreter = interpreter_new(lexer);
     int result = interpreter_expr(interpreter);
     printf("%d\n", result);
+    lexer_free(lexer);
     interpreter_free(interpreter);
 
     printf("32 + 1 = ");
-    interpreter = interpreter_new("32 + 1", 6);
+    lexer = lexer_new("32 + 1", 6);
+    interpreter = interpreter_new(lexer);
     result = interpreter_expr(interpreter);
     printf("%d\n", result);
+    lexer_free(lexer);
     interpreter_free(interpreter);
 
     printf("40 + 2 = ");
-    interpreter = interpreter_new("40 + 2", 6);
+    lexer = lexer_new("40 + 2", 6);
+    interpreter = interpreter_new(lexer);
     result = interpreter_expr(interpreter);
     printf("%d\n", result);
+    lexer_free(lexer);
     interpreter_free(interpreter);
 
     printf("1  +  2 + 3 = ");
-    interpreter = interpreter_new("1  +  2 + 3", 11);
+    lexer = lexer_new("1  +  2 + 3", 11);
+    interpreter = interpreter_new(lexer);
     result = interpreter_expr(interpreter);
     printf("%d\n", result);
+    lexer_free(lexer);
+    interpreter_free(interpreter);
+
+    printf("2+ 2 * 3 = ");
+    lexer = lexer_new("2+2*3", 5);
+    interpreter = interpreter_new(lexer);
+    result = interpreter_expr(interpreter);
+    printf("%d\n", result);
+    lexer_free(lexer);
     interpreter_free(interpreter);
 
     return 0;
