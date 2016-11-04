@@ -10,6 +10,8 @@
 #define T_PLUS    2
 #define T_EOF     3
 #define T_MINUS   4
+#define T_DIV     5
+#define T_MUL     6
 
 typedef struct token_s token_t;
 struct token_s {
@@ -138,6 +140,16 @@ token_t *interpreter_next_token(interpreter_t *interpreter) {
             return token;
         }
 
+        if (interpreter->current_char == '*') {
+            interpreter_advance(interpreter);
+            return token_new(T_MUL, '*');
+        }
+
+        if (interpreter->current_char == '/') {
+            interpreter_advance(interpreter);
+            return token_new(T_DIV, '/');
+        }
+
         interpreter_error(interpreter);
     }
 
@@ -153,14 +165,35 @@ void interpreter_eat(interpreter_t *interpreter, int token_type) {
     }
 }
 
-int interpreter_term(interpreter_t *interpreter) {
+int interpreter_factor(interpreter_t *interpreter) {
     token_t *token = interpreter->current_token;
     interpreter_eat(interpreter, T_INTEGER);
-    
+
     int value = token->value;
     free(token);
 
     return value;
+}
+
+int interpreter_term(interpreter_t *interpreter) {
+    token_t *token;
+
+    int result = interpreter_factor(interpreter);
+
+    while (interpreter->current_token->type == T_PLUS || interpreter->current_token->type == T_MINUS) {
+        token = interpreter->current_token;
+        if (token->type == T_PLUS) {
+            interpreter_eat(interpreter, T_PLUS);
+            result += interpreter_term(interpreter);
+        }
+        else if (token->type == T_MINUS) {
+            interpreter_eat(interpreter, T_MINUS);
+            result -= interpreter_term(interpreter);
+        }
+        free(token);
+    }
+
+    return result;
 }
 
 int interpreter_expr(interpreter_t *interpreter) {
@@ -181,7 +214,6 @@ int interpreter_expr(interpreter_t *interpreter) {
         free(token);
     }
 
-    //free(left); free(op); free(right);
     return result;
 }
 
