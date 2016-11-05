@@ -166,11 +166,12 @@ token_t *lexer_next_token(lexer_t *lexer) {
 }
 
 
-#define TYPE_BINOP 0
-#define TYPE_NUM   1
+#define TYPE_BINOP   0
+#define TYPE_NUM     1
+#define TYPE_UNARYOP 2
 typedef struct node_s node_t;
 struct node_s {
-    char type; /* 0 - binop; 1 - num */
+    char type; /* 0 - binop; 1 - num; 2 - unaryop */
     node_t  *left;
     node_t  *right;
     token_t *token;
@@ -202,6 +203,19 @@ node_t *num_new(token_t *token) {
 
 void num_free(node_t *num) {
     free(num);
+}
+
+node_t *unaryop_new(token_t *op, node_t *expr) {
+    node_t *node = (node_t *) calloc(1, sizeof(node_t));
+    node->type = TYPE_UNARYOP;
+    node->token = op;
+    node->op = op;
+    node->right = expr;
+    return node;
+}
+
+void unaryop_free(node_t *unaryop) {
+    free(unaryop);
 }
 
 typedef struct parser_s parser_t;
@@ -242,7 +256,17 @@ node_t *parser_expr(parser_t *parser);
 node_t *parser_factor(parser_t *parser) {
     token_t *token = parser->current_token;
 
-    if (token->type == T_INTEGER) {
+    if (token->type == T_PLUS) {
+        parser_eat(parser, T_PLUS);
+        return unaryop_new(token, parser_factor(parser));
+    }
+
+    else if (token->type == T_MINUS) {
+        parser_eat(parser, T_MINUS);
+        return unaryop_new(token, parser_factor(parser));
+    }
+
+    else if (token->type == T_INTEGER) {
         parser_eat(parser, T_INTEGER);
         return num_new(token);
         //free(token);
@@ -315,6 +339,7 @@ void interpreter_free(interpreter_t *interpreter) {
 
 int interpreter_visit_num(interpreter_t *interpreter, node_t *node);
 int interpreter_visit_binop(interpreter_t *interpreter, node_t *node);
+int interpreter_visit_unaryop(interpreter_t *interpreter, node_t *node);
 
 int interpreter_visit(interpreter_t *interpreter, node_t *node) {
     if (node->type == TYPE_BINOP) {
@@ -324,10 +349,24 @@ int interpreter_visit(interpreter_t *interpreter, node_t *node) {
     if (node->type == TYPE_NUM) {
         return interpreter_visit_num(interpreter, node);
     }
+
+    if (node->type == TYPE_UNARYOP) {
+        return interpreter_visit_unaryop(interpreter, node);
+    }
 }
 
 int interpreter_visit_num(interpreter_t *interpreter, node_t *node) {
     return node->value;
+}
+
+int interpreter_visit_unaryop(interpreter_t *interpreter, node_t *node) {
+    if (node->op->type == T_PLUS) {
+        return interpreter_visit(interpreter, node->right);
+    }
+
+    if (node->op->type == T_MINUS) {
+        return (-1)*interpreter_visit(interpreter, node->right); 
+    }
 }
 
 int interpreter_visit_binop(interpreter_t *interpreter, node_t *node) {
@@ -412,6 +451,26 @@ main(void) {
 
     printf("((2+ 2)) * 3 = ");
     lexer = lexer_new("((2+2))*3", 9);
+    parser = parser_new(lexer);
+    interpreter = interpreter_new(parser);
+    result = interpreter_interpret(interpreter);
+    printf("%d\n", result);
+    lexer_free(lexer);
+    parser_free(parser);
+    interpreter_free(interpreter);
+
+    printf("5+-2 = ");
+    lexer = lexer_new("5+-2", 4);
+    parser = parser_new(lexer);
+    interpreter = interpreter_new(parser);
+    result = interpreter_interpret(interpreter);
+    printf("%d\n", result);
+    lexer_free(lexer);
+    parser_free(parser);
+    interpreter_free(interpreter);
+
+    printf("5+--2 = ");
+    lexer = lexer_new("5+--2", 5);
     parser = parser_new(lexer);
     interpreter = interpreter_new(parser);
     result = interpreter_interpret(interpreter);
