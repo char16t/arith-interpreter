@@ -165,99 +165,189 @@ token_t *lexer_next_token(lexer_t *lexer) {
     return token;
 }
 
-typedef struct interpreter_s interpreter_t;
-struct interpreter_s {
+
+#define TYPE_BINOP 0
+#define TYPE_NUM   1
+typedef struct node_s node_t;
+struct node_s {
+    char type; /* 0 - binop; 1 - num */
+    node_t  *left;
+    node_t  *right;
+    token_t *token;
+    token_t *op;
+    int value;
+};
+
+node_t *binop_new(node_t *left, token_t *op, node_t *right) {
+    node_t *node = (node_t *) calloc(1, sizeof(node_t));
+    node->type = TYPE_BINOP;
+    node->left = left;
+    node->right = right;
+    node->op = op;
+    node->token = op;
+    return node;
+}
+
+void binop_free(node_t *binop) {
+    free(binop);
+}
+
+node_t *num_new(token_t *token) {
+    node_t *node = (node_t *) calloc(1, sizeof(node_t));
+    node->type = TYPE_NUM;
+    node->token = token;
+    node->value = token->value;
+    return node;
+}
+
+void num_free(node_t *num) {
+    free(num);
+}
+
+typedef struct parser_s parser_t;
+struct parser_s {
     lexer_t *lexer;
     token_t *current_token;
 };
 
-interpreter_t *interpreter_new(lexer_t *lexer) {
-    interpreter_t *interpreter = (interpreter_t *) calloc(1, sizeof(interpreter_t));
-    interpreter->lexer = lexer;
-    interpreter->current_token = lexer_next_token(interpreter->lexer);
-    return interpreter;
+parser_t *parser_new(lexer_t *lexer) {
+    parser_t *parser = (parser_t *) calloc(1, sizeof(parser_t));
+    parser->lexer = lexer;
+    parser->current_token = lexer_next_token(parser->lexer);
+    return parser;
 }
 
-void interpreter_free(interpreter_t *interpreter) {
-    free(interpreter->current_token);
-    free(interpreter);
+void parser_free(parser_t *parser) {
+    free(parser->current_token);
+    free(parser);
 }
 
-void interpreter_error(interpreter_t *interpreter) {
+void parser_error(parser_t *parser) {
     puts("Invalid token\n");
     exit(1);
 }
 
-token_t *interpreter_eat(interpreter_t *interpreter, int token_type) {
-    if (interpreter->current_token->type == token_type) {
-        token_t *prev = interpreter->current_token;
-        interpreter->current_token = lexer_next_token(interpreter->lexer);
+token_t *parser_eat(parser_t *parser, int token_type) {
+    if (parser->current_token->type == token_type) {
+        token_t *prev = parser->current_token;
+        parser->current_token = lexer_next_token(parser->lexer);
         return prev;
     } else {
-        interpreter_error(interpreter);
+        parser_error(parser);
     }
 }
 
-int interpreter_expr(interpreter_t *interpreter);
+node_t *parser_expr(parser_t *parser);
 
-int interpreter_factor(interpreter_t *interpreter) {
-    token_t *token = interpreter->current_token;
-    int value;
+node_t *parser_factor(parser_t *parser) {
+    token_t *token = parser->current_token;
 
     if (token->type == T_INTEGER) {
-        interpreter_eat(interpreter, T_INTEGER);
-        value = token->value;
-        free(token);
+        parser_eat(parser, T_INTEGER);
+        return num_new(token);
+        //free(token);
     }
     else if (token->type == T_LPAREN) {
-        token_t *lp = interpreter_eat(interpreter, T_LPAREN);
-        value = interpreter_expr(interpreter);
-        token_t *rp = interpreter_eat(interpreter, T_RPAREN);
+        token_t *lp = parser_eat(parser, T_LPAREN);
+        node_t *node = parser_expr(parser);
+        token_t *rp = parser_eat(parser, T_RPAREN);
         free(lp); free(rp);
+        return node;
     }
-
-    return value;
 }
 
-int interpreter_term(interpreter_t *interpreter) {
+node_t *parser_term(parser_t *parser) {
     token_t *token;
 
-    int result = interpreter_factor(interpreter);
-
-    while (interpreter->current_token->type == T_MUL || interpreter->current_token->type == T_DIV) {
-        token = interpreter->current_token;
+    node_t *node = parser_factor(parser);
+    while (parser->current_token->type == T_MUL || parser->current_token->type == T_DIV) {
+        token = parser->current_token;
         if (token->type == T_MUL) {
-            interpreter_eat(interpreter, T_MUL);
-            result *= interpreter_term(interpreter);
+            parser_eat(parser, T_MUL);
         }
         else if (token->type == T_DIV) {
-            interpreter_eat(interpreter, T_DIV);
-            result /= interpreter_term(interpreter);
+            parser_eat(parser, T_DIV);
         }
-        free(token);
+        node = binop_new(node, token, parser_factor(parser));
+        //free(token);
     }
 
-    return result;
+    return node;
 }
 
-int interpreter_expr(interpreter_t *interpreter) {
+node_t *parser_expr(parser_t *parser) {
     token_t *token;
 
-    int result = interpreter_term(interpreter);
-    while (interpreter->current_token->type == T_PLUS || interpreter->current_token->type == T_MINUS) {
-        token = interpreter->current_token;
+    node_t *node = parser_term(parser);
+    while (parser->current_token->type == T_PLUS || parser->current_token->type == T_MINUS) {
+        token = parser->current_token;
         if (token->type == T_PLUS) {
-            interpreter_eat(interpreter, T_PLUS);
-            result += interpreter_term(interpreter);
+            parser_eat(parser, T_PLUS);
         }
         else if (token->type == T_MINUS) {
-            interpreter_eat(interpreter, T_MINUS);
-            result -= interpreter_term(interpreter);
+            parser_eat(parser, T_MINUS);
         }
-        free(token);
+        node = binop_new(node, token, parser_term(parser));
+
+        //free(token);
     }
 
-    return result;
+    return node;
+}
+
+node_t *parser_parse(parser_t *parser) {
+    return parser_expr(parser);
+}
+typedef struct interpreter_s interpreter_t;
+struct interpreter_s {
+    parser_t *parser;
+};
+
+interpreter_t *interpreter_new(parser_t *parser) {
+    interpreter_t *interpreter = (interpreter_t *) calloc(1, sizeof(interpreter_t));
+    interpreter->parser = parser;
+    return interpreter;
+}
+
+void interpreter_free(interpreter_t *interpreter) {
+    free(interpreter);
+}
+
+int interpreter_visit_num(interpreter_t *interpreter, node_t *node);
+int interpreter_visit_binop(interpreter_t *interpreter, node_t *node);
+
+int interpreter_visit(interpreter_t *interpreter, node_t *node) {
+    if (node->type == TYPE_BINOP) {
+        return interpreter_visit_binop(interpreter, node);
+    }
+    
+    if (node->type == TYPE_NUM) {
+        return interpreter_visit_num(interpreter, node);
+    }
+}
+
+int interpreter_visit_num(interpreter_t *interpreter, node_t *node) {
+    return node->value;
+}
+
+int interpreter_visit_binop(interpreter_t *interpreter, node_t *node) {
+    if (node->op->type == T_PLUS) {
+        return interpreter_visit(interpreter, node->left) + interpreter_visit(interpreter, node->right);
+    }
+    else if (node->op->type == T_MINUS) {
+        return interpreter_visit(interpreter, node->left) - interpreter_visit(interpreter, node->right);
+    }
+    else if (node->op->type == T_MUL) {
+        return interpreter_visit(interpreter, node->left) * interpreter_visit(interpreter, node->right);
+    }
+    else if (node->op->type == T_DIV) {
+        return interpreter_visit(interpreter, node->left) / interpreter_visit(interpreter, node->right);
+    }
+}
+
+int interpreter_interpret(interpreter_t *interpreter) {
+    node_t *tree = parser_parse(interpreter->parser);
+    return interpreter_visit(interpreter, tree);
 }
 
 int
@@ -265,57 +355,69 @@ main(void) {
 /*
     char text[5];
     fgets(text, sizeof(text), stdin);
-    interpreter_t *interpreter = interpreter_new(text, 4);
-    int result = interpreter_expr(interpreter);
+    parser_t *parser = parser_new(text, 4);
+    int result = parser_expr(parser);
     printf("%d\n", result);
-    interpreter_free(interpreter);
+    parser_free(parser);
 */
     printf("32 - 1 = ");
     lexer_t *lexer = lexer_new("32 - 1", 6);
-    interpreter_t *interpreter = interpreter_new(lexer);
-    int result = interpreter_expr(interpreter);
+    parser_t *parser = parser_new(lexer);
+    interpreter_t *interpreter = interpreter_new(parser);
+    int result = interpreter_interpret(interpreter);
     printf("%d\n", result);
     lexer_free(lexer);
+    parser_free(parser);
     interpreter_free(interpreter);
 
     printf("32 + 1 = ");
     lexer = lexer_new("32 + 1", 6);
-    interpreter = interpreter_new(lexer);
-    result = interpreter_expr(interpreter);
+    parser = parser_new(lexer);
+    interpreter = interpreter_new(parser);
+    result = interpreter_interpret(interpreter);
     printf("%d\n", result);
     lexer_free(lexer);
+    parser_free(parser);
     interpreter_free(interpreter);
 
     printf("40 + 2 = ");
     lexer = lexer_new("40 + 2", 6);
-    interpreter = interpreter_new(lexer);
-    result = interpreter_expr(interpreter);
+    parser = parser_new(lexer);
+    interpreter = interpreter_new(parser);
+    result = interpreter_interpret(interpreter);
     printf("%d\n", result);
     lexer_free(lexer);
+    parser_free(parser);
     interpreter_free(interpreter);
 
     printf("1  +  2 + 3 = ");
     lexer = lexer_new("1  +  2 + 3", 11);
-    interpreter = interpreter_new(lexer);
-    result = interpreter_expr(interpreter);
+    parser = parser_new(lexer);
+    interpreter = interpreter_new(parser);
+    result = interpreter_interpret(interpreter);
     printf("%d\n", result);
     lexer_free(lexer);
+    parser_free(parser);
     interpreter_free(interpreter);
 
     printf("2+ 2 * 3 = ");
     lexer = lexer_new("2+2*3", 5);
-    interpreter = interpreter_new(lexer);
-    result = interpreter_expr(interpreter);
+    parser = parser_new(lexer);
+    interpreter = interpreter_new(parser);
+    result = interpreter_interpret(interpreter);
     printf("%d\n", result);
     lexer_free(lexer);
+    parser_free(parser);
     interpreter_free(interpreter);
 
-    printf("(2+ 2) * 3 = ");
-    lexer = lexer_new("(2+2)*3", 7);
-    interpreter = interpreter_new(lexer);
-    result = interpreter_expr(interpreter);
+    printf("((2+ 2)) * 3 = ");
+    lexer = lexer_new("((2+2))*3", 9);
+    parser = parser_new(lexer);
+    interpreter = interpreter_new(parser);
+    result = interpreter_interpret(interpreter);
     printf("%d\n", result);
     lexer_free(lexer);
+    parser_free(parser);
     interpreter_free(interpreter);
 
     return 0;
