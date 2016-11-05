@@ -235,7 +235,7 @@ parser_t *parser_new(lexer_t *lexer) {
 }
 
 void parser_free(parser_t *parser) {
-    //free(parser->current_token);
+    free(parser->current_token);
     free(parser);
 }
 
