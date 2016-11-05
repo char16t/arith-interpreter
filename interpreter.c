@@ -3,7 +3,7 @@
 #include <ctype.h>
 
 #ifndef NULL
-#define NULL (void *)NULL
+#define NULL (void *)0
 #endif
 
 #define T_INTEGER 1
@@ -190,6 +190,7 @@ node_t *binop_new(node_t *left, token_t *op, node_t *right) {
 }
 
 void binop_free(node_t *binop) {
+    free(binop->token);
     free(binop);
 }
 
@@ -202,6 +203,7 @@ node_t *num_new(token_t *token) {
 }
 
 void num_free(node_t *num) {
+    free(num->token);
     free(num);
 }
 
@@ -215,6 +217,7 @@ node_t *unaryop_new(token_t *op, node_t *expr) {
 }
 
 void unaryop_free(node_t *unaryop) {
+    free(unaryop->token);
     free(unaryop);
 }
 
@@ -232,7 +235,7 @@ parser_t *parser_new(lexer_t *lexer) {
 }
 
 void parser_free(parser_t *parser) {
-    free(parser->current_token);
+    //free(parser->current_token);
     free(parser);
 }
 
@@ -282,6 +285,7 @@ node_t *parser_factor(parser_t *parser) {
 
 node_t *parser_term(parser_t *parser) {
     token_t *token;
+    token_t *for_free;
 
     node_t *node = parser_factor(parser);
     while (parser->current_token->type == T_MUL || parser->current_token->type == T_DIV) {
@@ -342,17 +346,24 @@ int interpreter_visit_binop(interpreter_t *interpreter, node_t *node);
 int interpreter_visit_unaryop(interpreter_t *interpreter, node_t *node);
 
 int interpreter_visit(interpreter_t *interpreter, node_t *node) {
+    int value;
+
     if (node->type == TYPE_BINOP) {
-        return interpreter_visit_binop(interpreter, node);
+        value = interpreter_visit_binop(interpreter, node);
+        binop_free(node);
     }
     
-    if (node->type == TYPE_NUM) {
-        return interpreter_visit_num(interpreter, node);
+    else if (node->type == TYPE_NUM) {
+        value = interpreter_visit_num(interpreter, node);
+        num_free(node);
     }
 
-    if (node->type == TYPE_UNARYOP) {
-        return interpreter_visit_unaryop(interpreter, node);
+    else if (node->type == TYPE_UNARYOP) {
+        value = interpreter_visit_unaryop(interpreter, node);
+        unaryop_free(node);
     }
+
+    return value;
 }
 
 int interpreter_visit_num(interpreter_t *interpreter, node_t *node) {
