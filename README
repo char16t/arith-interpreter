@@ -1,0 +1,11 @@
+Simple arithmetic expressions interpreter.
+
+This is a good example to demonstrate how to works the interpreters of formal 
+languages. Build sources with `make` and check memory leaks with `make valgrind`.
+
+I'll be glad to any improvements. Send Pull Requests or write on e-mail
+v.manenkov@gmail.com
+
+This is a public domain. Do with this code what you want
+
+:)
