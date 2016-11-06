@@ -19,6 +19,4 @@ token_t *token_new(int type, int value);
 
 void token_free(token_t* token);
 
-void token_print(token_t *token);
-
 #endif
