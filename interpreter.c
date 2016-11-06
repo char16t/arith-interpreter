@@ -11,10 +11,6 @@ void interpreter_free(interpreter_t *interpreter) {
     free(interpreter);
 }
 
-int interpreter_visit_num(interpreter_t *interpreter, node_t *node);
-int interpreter_visit_binop(interpreter_t *interpreter, node_t *node);
-int interpreter_visit_unaryop(interpreter_t *interpreter, node_t *node);
-
 int interpreter_visit(interpreter_t *interpreter, node_t *node) {
     int value;
 
