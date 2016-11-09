@@ -10,12 +10,21 @@
 #define T_LPAREN  7
 #define T_RPAREN  8
 
+typedef union token_value_u {
+    char *c;
+    int   i;
+} token_value_t;
+
 typedef struct token_s {
     int type;
-    int value;
+    token_value_t value;
 } token_t;
 
-token_t *token_new(int type, int value);
+token_t *token_new(int type, token_value_t value);
+
+token_t *token_new_str(int type, char *str);
+
+token_t *token_new_int(int type, int value);
 
 void token_free(token_t* token);
 

@@ -13,7 +13,7 @@ typedef struct node_s {
     struct node_s  *right;
     token_t *token;
     token_t *op;
-    int value;
+    token_value_t value;
 } node_t;
 
 node_t *binop_new(node_t *left, token_t *op, node_t *right);

@@ -33,7 +33,7 @@ int interpreter_visit(interpreter_t *interpreter, node_t *node) {
 }
 
 int interpreter_visit_num(interpreter_t *interpreter, node_t *node) {
-    return node->value;
+    return node->value.i;
 }
 
 int interpreter_visit_unaryop(interpreter_t *interpreter, node_t *node) {

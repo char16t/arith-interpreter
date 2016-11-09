@@ -56,45 +56,45 @@ token_t *lexer_next_token(lexer_t *lexer) {
         }
 
         if (isdigit(lexer->current_char)) {
-            token = token_new(T_INTEGER, lexer_integer(lexer));
+            token = token_new_int(T_INTEGER, lexer_integer(lexer));
             return token;
         }
 
         if (lexer->current_char == '+') {
             lexer_advance(lexer);
-            token = token_new(T_PLUS, '+');
+            token = token_new_str(T_PLUS, "+");
             return token;
         }
 
         if (lexer->current_char == '-') {
             lexer_advance(lexer);
-            token = token_new(T_MINUS, '-');
+            token = token_new_str(T_MINUS, "-");
             return token;
         }
 
         if (lexer->current_char == '*') {
             lexer_advance(lexer);
-            return token_new(T_MUL, '*');
+            return token_new_str(T_MUL, "*");
         }
 
         if (lexer->current_char == '/') {
             lexer_advance(lexer);
-            return token_new(T_DIV, '/');
+            return token_new_str(T_DIV, "/");
         }
 
         if (lexer->current_char == '(') {
             lexer_advance(lexer);
-            return token_new(T_LPAREN, '(');
+            return token_new_str(T_LPAREN, "(");
         }
 
         if (lexer->current_char == ')') {
             lexer_advance(lexer);
-            return token_new(T_RPAREN, ')');
+            return token_new_str(T_RPAREN, ")");
         }
 
         lexer_error(lexer);
     }
 
-    token = token_new(T_EOF, (char)0);
+    token = token_new_str(T_EOF, NULL);
     return token;
 }
