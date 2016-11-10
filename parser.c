@@ -48,7 +48,6 @@ node_t *parser_factor(parser_t *parser) {
     else if (token->type == T_INTEGER) {
         parser_eat(parser, T_INTEGER);
         return num_new(token);
-        //free(token);
     }
     else if (token->type == T_LPAREN) {
         token_t *lp = parser_eat(parser, T_LPAREN);
@@ -61,7 +60,6 @@ node_t *parser_factor(parser_t *parser) {
 
 node_t *parser_term(parser_t *parser) {
     token_t *token;
-    token_t *for_free;
 
     node_t *node = parser_factor(parser);
     while (parser->current_token->type == T_MUL || parser->current_token->type == T_DIV) {
@@ -73,7 +71,6 @@ node_t *parser_term(parser_t *parser) {
             parser_eat(parser, T_DIV);
         }
         node = binop_new(node, token, parser_factor(parser));
-        //free(token);
     }
 
     return node;
@@ -92,8 +89,6 @@ node_t *parser_expr(parser_t *parser) {
             parser_eat(parser, T_MINUS);
         }
         node = binop_new(node, token, parser_term(parser));
-
-        //free(token);
     }
 
     return node;

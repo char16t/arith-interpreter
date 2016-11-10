@@ -35,7 +35,7 @@ void list_append(list_t *list, node_t *x) {
 		list->head = newNode;
 		return;
 	}
-	while(temp->next != NULL) temp = temp->next; // Go To last Node
+	while(temp->next != NULL) temp = temp->next;
 	temp->next = newNode;
 	newNode->prev = temp;
 }
@@ -54,7 +54,7 @@ void list_remove_last(list_t *list) {
 	if(list->head == NULL) {
 		return;
 	}
-	while(temp->next != NULL) temp = temp->next; // Go To last Node
+	while(temp->next != NULL) temp = temp->next;
 	if (temp->prev) {
         if(temp->prev->next) {
             temp->prev->next = NULL;

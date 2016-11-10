@@ -28,7 +28,7 @@ hashtable_t *hashtable_new( int size ) {
 int hashtable_hash( hashtable_t *hashtable, char *key ) {
 
 	unsigned long int hashval = 0; 
-	int i = 0;
+	unsigned int i = 0;
 
 	while( hashval < ULONG_MAX && i < strlen( key ) ) {
 		hashval = hashval << 8;

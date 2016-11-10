@@ -7,14 +7,47 @@
 
 #include "token.h"
 
-typedef struct node_s {
+struct binop_node_s;
+struct num_node_s;
+struct unaryop_node_s;
+
+struct node_s {
     char type; /* 0 - binop; 1 - num; 2 - unaryop */
+    /*
     struct node_s  *left;
     struct node_s  *right;
     token_t *token;
     token_t *op;
     token_value_t value;
-} node_t;
+    */
+    union {
+        struct binop_node_s *binop;
+        struct unaryop_node_s *unaryop;
+        struct num_node_s *num;
+    } data;
+};
+typedef struct node_s node_t;
+
+struct binop_node_s {
+    node_t *left;
+    node_t *right;
+    token_t *op;
+    token_t *token;
+};
+typedef struct binop_node_s binop_node_t;
+
+struct num_node_s {
+    token_t *token;
+    token_value_t value;
+};
+typedef struct num_node_s num_node_t;
+
+struct unaryop_node_s {
+    token_t *token;
+    token_t *op;
+    node_t  *expr;
+};
+typedef struct unaryop_node_s unaryop_node_t;
 
 node_t *binop_new(node_t *left, token_t *op, node_t *right);
 
