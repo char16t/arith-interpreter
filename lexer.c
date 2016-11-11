@@ -9,6 +9,7 @@ lexer_t *lexer_new(char *text, unsigned int len) {
     lexer->text_length = len;
     lexer->pos = 0;
     lexer->current_char = lexer->text[lexer->pos];
+    return lexer;
 }
 
 void lexer_free(lexer_t *lexer) {
@@ -62,39 +63,39 @@ token_t *lexer_next_token(lexer_t *lexer) {
 
         if (lexer->current_char == '+') {
             lexer_advance(lexer);
-            token = token_new_str(T_PLUS, "+");
+            token = token_new_str(T_PLUS, "+", 1);
             return token;
         }
 
         if (lexer->current_char == '-') {
             lexer_advance(lexer);
-            token = token_new_str(T_MINUS, "-");
+            token = token_new_str(T_MINUS, "-", 1);
             return token;
         }
 
         if (lexer->current_char == '*') {
             lexer_advance(lexer);
-            return token_new_str(T_MUL, "*");
+            return token_new_str(T_MUL, "*", 1);
         }
 
         if (lexer->current_char == '/') {
             lexer_advance(lexer);
-            return token_new_str(T_DIV, "/");
+            return token_new_str(T_DIV, "/", 1);
         }
 
         if (lexer->current_char == '(') {
             lexer_advance(lexer);
-            return token_new_str(T_LPAREN, "(");
+            return token_new_str(T_LPAREN, "(", 1);
         }
 
         if (lexer->current_char == ')') {
             lexer_advance(lexer);
-            return token_new_str(T_RPAREN, ")");
+            return token_new_str(T_RPAREN, ")", 1);
         }
 
         lexer_error(lexer);
     }
 
-    token = token_new_str(T_EOF, NULL);
+    token = token_new_str(T_EOF, "", 1);
     return token;
 }
