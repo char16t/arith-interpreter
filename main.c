@@ -103,5 +103,15 @@ main(void) {
     parser_free(parser);
     interpreter_free(interpreter);
 
+    printf("+5+--2 = ");
+    lexer = lexer_new("+5+--2", 6);
+    parser = parser_new(lexer);
+    interpreter = interpreter_new(parser);
+    result = interpreter_interpret(interpreter);
+    printf("%d\n", result);
+    lexer_free(lexer);
+    parser_free(parser);
+    interpreter_free(interpreter);
+
     return 0;
 }

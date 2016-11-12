@@ -11,6 +11,7 @@ parser_t *parser_new(lexer_t *lexer) {
 }
 
 void parser_free(parser_t *parser) {
+    free(parser->current_token->value.c);
     free(parser->current_token);
     free(parser);
 }
@@ -36,12 +37,14 @@ node_t *parser_factor(parser_t *parser) {
     token_t *token = parser->current_token;
 
     if (token->type == T_PLUS) {
-        parser_eat(parser, T_PLUS);
+        token_t *plus = parser_eat(parser, T_PLUS);
+        free(plus->value.c);
         return unaryop_new(token, parser_factor(parser));
     }
 
     else if (token->type == T_MINUS) {
-        parser_eat(parser, T_MINUS);
+        token_t *minus = parser_eat(parser, T_MINUS);
+        free(minus->value.c);
         return unaryop_new(token, parser_factor(parser));
     }
 

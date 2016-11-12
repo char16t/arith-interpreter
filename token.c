@@ -25,6 +25,9 @@ token_t *token_new_int(int type, int value) {
 }
 
 void token_free(token_t* token) {
+    if (token->value.c) {
+        free(token->value.c);
+    }
     free(token);
 }
 
