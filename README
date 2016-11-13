@@ -1,5 +1,29 @@
 Simple arithmetic expressions interpreter.
 
+Can interpret expressions like a
+7 + 3 * (100 / ((5 - - - + - (3 + 4) - +2) / (3 + 1) - 1)) / (2 + 3) - 5 - 3 + (8)
+
+Features and benefits:
+ * Operators priority support
+ * Unary operators support
+ * Brackets support
+ * Skipping whitespace symbols
+ * Lexer, parser and AST-tree of arithmetic expression
+ * State at the time of the commit '79fa8ccfcbd8bff967efe3e7ad58fa236535ad89'
+   has no memory leaks. In latest version unions was used for implementation
+   different types of AST-tree nodes and different types of tokens. This version
+   has a very small memory leak 2 bytes per each unary minus. Run 'make valgrind'
+   for more info. I hope that can fix this, but later :)
+ * Latest version is a good start point for building a real language interpreter
+   or JIT-compiler. Just implements your own grammar rules and scopes of variables
+   using hashtables.
+
+Used grammars:
+
+expr   := term ((PLUS | MINUS) term)*
+term   := factor ((MUL | DIV) factor)*
+factor := (PLUS | MINUS) factor | INTEGER | LPAREN expr RPAREN
+
 This is a good example to demonstrate how to works the interpreters of formal 
 languages. Build sources with `make` and check memory leaks with `make valgrind`.
 
