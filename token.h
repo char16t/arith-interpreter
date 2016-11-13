@@ -22,7 +22,7 @@ typedef struct token_s {
 
 token_t *token_new(int type, token_value_t value);
 
-token_t *token_new_str(int type, char *str);
+token_t *token_new_str(int type, char *str, int length);
 
 token_t *token_new_int(int type, int value);
 

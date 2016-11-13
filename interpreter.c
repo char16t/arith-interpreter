@@ -33,31 +33,31 @@ int interpreter_visit(interpreter_t *interpreter, node_t *node) {
 }
 
 int interpreter_visit_num(interpreter_t *interpreter, node_t *node) {
-    return node->value.i;
+    return node->data.num->value.i;
 }
 
 int interpreter_visit_unaryop(interpreter_t *interpreter, node_t *node) {
-    if (node->op->type == T_PLUS) {
-        return interpreter_visit(interpreter, node->right);
+    if (node->data.unaryop->op->type == T_PLUS) {
+        return interpreter_visit(interpreter, node->data.unaryop->expr);
     }
 
-    if (node->op->type == T_MINUS) {
-        return (-1)*interpreter_visit(interpreter, node->right); 
+    if (node->data.unaryop->op->type == T_MINUS) {
+        return (-1)*interpreter_visit(interpreter, node->data.unaryop->expr); 
     }
 }
 
 int interpreter_visit_binop(interpreter_t *interpreter, node_t *node) {
-    if (node->op->type == T_PLUS) {
-        return interpreter_visit(interpreter, node->left) + interpreter_visit(interpreter, node->right);
+    if (node->data.binop->op->type == T_PLUS) {
+        return interpreter_visit(interpreter, node->data.binop->left) + interpreter_visit(interpreter, node->data.binop->right);
     }
-    else if (node->op->type == T_MINUS) {
-        return interpreter_visit(interpreter, node->left) - interpreter_visit(interpreter, node->right);
+    else if (node->data.binop->op->type == T_MINUS) {
+        return interpreter_visit(interpreter, node->data.binop->left) - interpreter_visit(interpreter, node->data.binop->right);
     }
-    else if (node->op->type == T_MUL) {
-        return interpreter_visit(interpreter, node->left) * interpreter_visit(interpreter, node->right);
+    else if (node->data.binop->op->type == T_MUL) {
+        return interpreter_visit(interpreter, node->data.binop->left) * interpreter_visit(interpreter, node->data.binop->right);
     }
-    else if (node->op->type == T_DIV) {
-        return interpreter_visit(interpreter, node->left) / interpreter_visit(interpreter, node->right);
+    else if (node->data.binop->op->type == T_DIV) {
+        return interpreter_visit(interpreter, node->data.binop->left) / interpreter_visit(interpreter, node->data.binop->right);
     }
 }
 
